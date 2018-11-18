@@ -1,0 +1,4 @@
+0.99;critical;*.badguys.com
+0.5;warning;*.uncertainguys.com
+0.75;high;*.google.com
+0.4;warning;www.gafotas.com
