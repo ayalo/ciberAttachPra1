@@ -306,7 +306,6 @@ function load_suspicious(file_name)
 function check_an(cert,list_suspicious_DNS)
         if not list_suspicious_DNS then
 		list_suspicious_DNS="list.csv"
-
 	end
 	suspicious_list=load_suspicious(list_suspicious_DNS)
         print ("Suspicious list used : ",list_suspicious_DNS)
@@ -376,8 +375,18 @@ function check_validity(cert, compare_date)
 
 	local validity_not_before= cert.validity.notBefore
 	local validity_not_after= cert.validity.notAfter
-	--print ("FECHA: ",day," ",month","year)
-	--time = os.time()
+	local actual_date
+	if not compare_date then 
+		converted_date = os.time()
+		
+	else
+		local pattern = "(%d+)-(%d+)-(%d+) (%d+):(%d+):(%d+)"
+		local year, month, day, hour, min, sec = compare_date:match(pattern)
+		converted_date = os.time({year=year, month=month, day=day, hour=hour, min=min, sec=sec})
+
+	end
+	print ("Given date timestamp: ",converted_date)
+	print ("Given date: ",date_to_string(converted_date))
 	--year = tonumber(os.date('%Y',time))
         --month = tonumber(os.date('%m',time))
 	--day = tonumber(os.date('%d',time))
@@ -386,27 +395,30 @@ function check_validity(cert, compare_date)
 	--s = tonumber(os.date('%S',time))
 
 	--print ("TODAY : ",day,month,year,h,m,s)
+	stdnse.debug1("Compare_date : ",date_to_string(converted_date))
 	stdnse.debug1("Validity.notBefore in cert : %s ",date_to_string(validity_not_before))
-	--local y, m, d = string.match(date_to_string(validity_not_before), "([^-]+)/([^-]+)/([^-]+)")
-	--date_notBefore=split(date_to_string(validity_not_before),'([^-]+)')[2]
 	stdnse.debug1("Validity.notAfter in cert : %s ",date_to_string(validity_not_after))
-local pattern = "(%d+)-(%d+)-(%d+) (%d+):(%d+):(%d+)"
-local timeToConvert = "2018-11-11 19:24:31"
+--local pattern = "(%d+)-(%d+)-(%d+) (%d+):(%d+):(%d+)"
+-- local  actual_date= "2018-11-11 19:24:31" -- same date as the cert10
+-- local actual_date="2017-11-11 22:13:40" -- Not in time
+-- local actual_date="2019-02-26 12:34:00" -- OK in period is valid 
+-- local actual_date="2020-04-23 22:45:12" -- Not in time
+--local year, month, day, hour, min, sec = actual_date:match(pattern)
+--local converted_date = os.time({year=year, month=month, day=day, hour=hour, min=min, sec=sec})
+--print("Tiempo en timestamp",converted_date)
 
-local runyear, runmonth, runday, runhour, runminute, runseconds = timeToConvert:match(pattern)
-local convertedTimestamp = os.time({year = runyear, month = runmonth, day = runday, hour = runhour, min = runminute, sec = runseconds})
-print("Tiempo en timestamp",convertedTimestamp)
-
-local pattern2= "(%d+)-(%d+)-(%d+)%s+(%d+):(%d+):(%d+)"
-print ("pase pattern2")
---pattern2="^(%d%d%d%d)%-(%d%d)%-(%d%d)(%d%d%.?%d*):(%d%d):(%d%d)"
-local timeToConvert2=date_to_string(validity_not_before)
-print ("pase timetoconvert2 %s",timeToConvert2)
-local byear, bmonth, bday, T, bhour, bmin, bsec= timeToConvert2:match(pattern2)
-print ("pase variables , %s %s %s", bday, bmonth)
-local convertedBefore= os.time({year=byear, mont = bmonth, day = bday, hour = bhour, min = bmin, sec = bsec})
-print ("pase convertedBefore ostime")
-print ("Tiempo en Before= ",convertedBefore)
+local dateBefore=os.time(validity_not_before)
+print ("DateBefore timestamp: ",dateBefore)
+print ("DateBefore: ",date_to_string(validity_not_before))
+local dateAfter=os.time(validity_not_after)
+print ("DateAfter timestamp: ", dateAfter)
+print ("DateAfter: ",date_to_string(validity_not_after))
+print ("Comparando  ")
+if converted_date >= dateBefore and converted_date <=dateAfter then 
+	print ("Certificate Validity date OK in period")
+else
+	print (" WARNING : The certificate Validity date is not in time.")
+end
 
 
 end
@@ -421,10 +433,10 @@ end
 action = function(host, port)
   host.targetname = tls.servername(host)
   local status, cert = sslcert.getCertificate(host, port)
-  local list_suspicious_DNS="list.csv"
+  --local list_suspicious_DNS="list.csv"
   -- our functions ---
   print_key_identi(cert)	
-  check_validity(cert)
+  check_validity(cert,nmap.registry.args.date)
   stdnse.debug1("Looking for suspicious DNS ... ")
  
   check_an(cert,nmap.registry.args.list)
